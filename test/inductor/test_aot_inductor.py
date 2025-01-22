@@ -3654,6 +3654,23 @@ class AOTInductorTestsTemplate:
                 FileCheck().check_not(f"before_launch - {kernel_name}").run(code)
                 FileCheck().check_not(f"after_launch - {kernel_name}").run(code)
 
+    def test_aoti_debug_printer_works_on_constants(self):
+        # covers https://github.com/pytorch/pytorch/issues/145425
+        batch_size = 32
+        seq_length = 50
+        hidden_size = 768
+
+        def test_fn():
+            inp = torch.randn(batch_size, seq_length, hidden_size, device="cuda")
+            weight = torch.randn(hidden_size, hidden_size, device="cuda")
+            matmul_output = inp @ weight
+            final_output = torch.nn.LayerNorm(hidden_size, device="cuda")(matmul_output)
+            return True
+        comp = torch.compile(options={"aot_inductor.debug_intermediate_value_printer": "2"})(test_fn)
+        comp()
+
+
+
     def test_aoti_debug_printer_user_defined_triton_kernel(self):
         if self.device != GPU_TYPE:
             raise unittest.SkipTest("requires GPU")

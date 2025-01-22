@@ -271,6 +271,7 @@ class DebugPrinterManager:
                             f'aoti_torch_print_tensor_handle({arg}, "{launch_prefix} - {kernel_name} - {arg}");'
                         )
             else:
-                V.graph.wrapper_code.writeline(
-                    f'_print_debugging_tensor_value_info("inductor: {launch_prefix} - {kernel_name} - {arg}", {arg})'
-                )
+                if isinstance(arg, str):
+                    V.graph.wrapper_code.writeline(
+                        f'_print_debugging_tensor_value_info("inductor: {launch_prefix} - {kernel_name} - {arg}", {arg})'
+                    )
