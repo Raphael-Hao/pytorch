@@ -15,6 +15,7 @@ from .scheduler import BaseSchedulerNode, Scheduler, WhyNoFuse
 from .template_heuristics import (
     BaseConfigHeuristic,
     CUDAConfigHeuristic,
+    ROCmConfigHeuristic
     XPUConfigHeuristic,
 )
 from .virtualized import V
