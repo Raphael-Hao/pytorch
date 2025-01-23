@@ -19,7 +19,7 @@ class BaseConfigHeuristic:
         # List of dictionaries to store the kernel configs. Configs that evaluate to true
         # will be utilised on the target platform. The configs are as follows:
         # (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps)
-        mm_configs = [
+        self.mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (32, 32, 16, 1, 2), "cond": True},
             {"config": (32, 32, 128, 2, 4), "cond": True},
@@ -43,7 +43,7 @@ class BaseConfigHeuristic:
         ]
 
         # Exhaustive search for mm configs
-        exhaustive_configs = [
+        self.exhaustive_configs = [
             {"config": (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps), "cond": True}
             for BLOCK_M, BLOCK_N, BLOCK_K in itertools.product(
                 [16, 32, 64, 128, 256], repeat=3
@@ -57,7 +57,7 @@ class BaseConfigHeuristic:
         # when the learned heuristic is used, the learned heuristic reduces the number of configs down to 10
         # which saves compilation time (since less configs are autotuned) and potentially increase performance
         # because the learned heuristic might predict a config that is not part mm_configs
-        extra_mm_configs = [
+        self.extra_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (16, 32, 16, 3, 2), "cond": True},
             {"config": (16, 32, 32, 4, 2), "cond": True},
@@ -71,7 +71,7 @@ class BaseConfigHeuristic:
             {"config": (128, 128, 64, 5, 4), "cond": True},
         ]
 
-        int8_mm_configs = [
+        self.int8_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (64, 64, 32, 2, 4), "cond": True},
             {"config": (64, 128, 32, 3, 4), "cond": True},
@@ -86,13 +86,13 @@ class BaseConfigHeuristic:
             {"config": (256, 128, 128, 3, 8), "cond": True},
         ]
 
-        mixed_mm_configs = [
+        self.mixed_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (16, 128, 256, 3, 4), "cond": True},
             {"config": (16, 128, 256, 5, 8), "cond": True},
         ]
 
-        persistent_mm_configs = [
+        self.persistent_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (128, 256, 64, 3, 8), "cond": True},
             {"config": (128, 128, 64, 3, 8), "cond": True},
@@ -101,7 +101,7 @@ class BaseConfigHeuristic:
             {"config": (128, 128, 64, 4, 8), "cond": True},
         ]
 
-        scaled_mm_configs = [
+        self.scaled_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (128, 256, 32, 3, 8), "cond": True},
             {"config": (256, 128, 32, 3, 8), "cond": True},
@@ -202,7 +202,7 @@ class BaseConfigHeuristic:
             {"config": (32, 256, 64, 6, 4), "cond": True},
         ]
 
-        scaled_persistent_mm_configs = [
+        self.scaled_persistent_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (128, 128, 64, 3, 8), "cond": True},
             {"config": (128, 128, 128, 3, 8), "cond": True},
@@ -217,7 +217,7 @@ class BaseConfigHeuristic:
 
         # TODO: Unify with other gemm patterns, mm_plus_mm currently follows
         # slightly different pattern than rest
-        mm_plus_mm_configs = [
+        self.mm_plus_mm_configs = [
             {"config": (64, 64, 32, 2, 4), "cond": True},
             {"config": (64, 64, 32, 3, 8), "cond": True},
             {"config": (64, 64, 32, 4, 16), "cond": True},
@@ -230,7 +230,7 @@ class BaseConfigHeuristic:
             {"config": (32, 32, 16, 1, 2), "cond": True},
         ]
 
-        conv_configs = [
+        self.conv_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
             {"config": (64, 256, 16, 2, 4), "cond": True},
             {"config": (256, 64, 16, 2, 4), "cond": True},
@@ -408,10 +408,12 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
     def __init__(self):
         from .utils import get_backend_num_stages
-        default_num_stages = get_backend_num_stages()
+        super().__init__()
+
+        self.default_num_stages = get_backend_num_stages()
 
         # Exhaustive search for mm configs
-        exhaustive_configs = [
+        self.exhaustive_configs = [
             {"config": (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps), "cond": True}
             for BLOCK_M, BLOCK_N, BLOCK_K in itertools.product(
                 [16, 32, 64, 128, 256], repeat=3
@@ -464,7 +466,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
                             matrix_instr_nonkdim,
                         )
                     )
-                    yield triton_config(
+                    yield self.triton_config(
                         BLOCK_M=block_m,
                         BLOCK_N=block_n,
                         BLOCK_K=block_k,
@@ -474,7 +476,9 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
                     )
 
     def get_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.mm_configs)
+        filtered_configs = self._filter_configs(
+                self.mm_configs, self.default_num_stages
+        )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_exhaustive_mm_configs(self) -> List[Dict[str, Any]]:
@@ -520,11 +524,14 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_mm_plus_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.mm_plus_mm_configs)
-        return filtered_configs
+        filtered_configs = self._filter_configs(self.mm_plus_mm_configs, num_stages=1)
+        return partial(self.preprocess_mm_plus_mm_configs, configs=filtered_configs)
+
 
     def get_conv_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.conv_configs)
+        filtered_configs = self._filter_configs(
+                self.conv_configs, num_stages=2
+        )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
 
